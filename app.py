@@ -32,6 +32,8 @@ def get_output_path(base_output_path, image_metadata: ImageMetadata) -> str:
 def is_jpeg(image_path):
     return ".jpg" in image_path or ".jpeg" in image_path or ".JPG" in image_path
 
+from pathlib import Path
+
 
 def move_file(image_path, output_dir, dry_run, progress_bar):
     image_metadata = extract_metadata(image_path)
@@ -41,7 +43,12 @@ def move_file(image_path, output_dir, dry_run, progress_bar):
         print(f"(Dry Run) - Would move {image_metadata.file_path} to {output_path}\n")
     else:
         os.makedirs(output_path, exist_ok=True)
+
+        my_file = Path(f"{output_path}\\{os.path.basename(image_metadata.file_path)}")
+        if my_file.exists():
+            os.remove(f"{output_path}\\{os.path.basename(image_metadata.file_path)}")
         shutil.move(image_metadata.file_path, output_path)
+        print(f"Moved {image_metadata.file_path} to {output_path}")
         progress_bar.update(1)
 
 
@@ -78,6 +85,6 @@ How to deal with photos of other formats? HEIC?
 '''
 if __name__ == "__main__":
     input_dir = "C:\\Users\\arsal\\Documents\\photos_to_sort\\*"
-    output_dir = "C:\\Users\\arsal\\Documents\\sorted_photos"
+    output_dir = "C:\\Users\\arsal\\Picutres\\sorted_photos"
     dry_run = False
     run(input_dir, output_dir, dry_run)
