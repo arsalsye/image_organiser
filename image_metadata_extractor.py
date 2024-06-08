@@ -89,7 +89,7 @@ def get_city(location):
 
 
 def extract_metadata(image_path: str) -> ImageMetadata:
-    print(f"Extracting metadata for {image_path}")
+    #print(f"Extracting metadata for {image_path}")
     exif_data = get_exif_data(image_path)
     lat, lon = get_lat_lon(exif_data)
     location = get_location(lat, lon)

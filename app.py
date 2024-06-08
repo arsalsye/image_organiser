@@ -8,7 +8,7 @@ import pillow_heif
 
 from image_metadata_extractor import extract_metadata
 from model.image_metadata import ImageMetadata
-
+from tqdm import tqdm
 
 def get_output_path(base_output_path, image_metadata: ImageMetadata) -> str:
     if image_metadata.created_on is None:
@@ -33,7 +33,7 @@ def is_jpeg(image_path):
     return ".jpg" in image_path or ".jpeg" in image_path or ".JPG" in image_path
 
 
-def move_file(image_path, output_dir, dry_run):
+def move_file(image_path, output_dir, dry_run, progress_bar):
     image_metadata = extract_metadata(image_path)
     output_path = get_output_path(output_dir, image_metadata)
 
@@ -42,7 +42,7 @@ def move_file(image_path, output_dir, dry_run):
     else:
         os.makedirs(output_path, exist_ok=True)
         shutil.move(image_metadata.file_path, output_path)
-        print(f"Moved {image_metadata.file_path} to {output_path}\n")
+        progress_bar.update(1)
 
 
 def is_file_format_supported(file_path):
@@ -57,9 +57,10 @@ def run(input_dir, output_dir, dry_run):
     supported_files = [file for file in files if is_file_format_supported(file)]
     print(f"Found {len(supported_files)} images to move")
 
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        for image_path in supported_files:
-            executor.submit(move_file, image_path, output_dir, dry_run)
+    with tqdm(total=len(supported_files)) as progress_bar:
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            for image_path in supported_files:
+                executor.submit(move_file, image_path, output_dir, dry_run, progress_bar)
 
 
 '''
@@ -76,7 +77,7 @@ Deal with cases where we don't have any metadata
 How to deal with photos of other formats? HEIC?
 '''
 if __name__ == "__main__":
-    input_dir = "C:\\Users\\arsal\\Documents\\photos_to_sort\\202112__\\*"
+    input_dir = "C:\\Users\\arsal\\Documents\\photos_to_sort\\*"
     output_dir = "C:\\Users\\arsal\\Documents\\sorted_photos"
     dry_run = False
     run(input_dir, output_dir, dry_run)
