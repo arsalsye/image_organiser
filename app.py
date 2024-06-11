@@ -19,7 +19,7 @@ def get_output_path(base_output_path, image_metadata: ImageMetadata) -> str:
     #month_str = calendar.month_name[month]
 
     if image_metadata.address.country is not None:
-        location = f" - {image_metadata.address.country}"
+        location = f"{image_metadata.address.country}"
     else:
         location = ""
 
