@@ -15,17 +15,15 @@ def get_output_path(base_output_path, image_metadata: ImageMetadata) -> str:
         return os.path.join(base_output_path, f"Misc")
 
     year = image_metadata.created_on.year
-    month = image_metadata.created_on.month
-    month_str = calendar.month_name[month]
+    #month = image_metadata.created_on.month
+    #month_str = calendar.month_name[month]
 
-    if image_metadata.address.city is not None:
-        location = f" - {image_metadata.address.city}"
-    elif image_metadata.address.country is not None:
+    if image_metadata.address.country is not None:
         location = f" - {image_metadata.address.country}"
     else:
         location = ""
 
-    relative_path = f"{year}\\{month_str}{location}"
+    relative_path = f"{year}\\{location}"
     return os.path.join(base_output_path, relative_path)
 
 
@@ -65,9 +63,14 @@ def run(input_dir, output_dir, dry_run):
     print(f"Found {len(supported_files)} images to move")
 
     with tqdm(total=len(supported_files)) as progress_bar:
-        with ThreadPoolExecutor(max_workers=8) as executor:
-            for image_path in supported_files:
-                executor.submit(move_file, image_path, output_dir, dry_run, progress_bar)
+        #with ThreadPoolExecutor(max_workers=8) as executor:
+        for image_path in supported_files:
+            try:
+                #executor.submit(move_file, image_path, output_dir, dry_run, progress_bar)
+                move_file(image_path, output_dir, dry_run, progress_bar)
+            except:
+                print(f"Failed to move file {image_path}")
+
 
 
 '''
@@ -85,6 +88,6 @@ How to deal with photos of other formats? HEIC?
 '''
 if __name__ == "__main__":
     input_dir = "C:\\Users\\arsal\\Documents\\photos_to_sort\\*"
-    output_dir = "C:\\Users\\arsal\\Picutres\\sorted_photos"
+    output_dir = "C:\\Users\\arsal\\Pictures\\sorted_photos"
     dry_run = False
     run(input_dir, output_dir, dry_run)

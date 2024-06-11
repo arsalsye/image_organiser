@@ -10,7 +10,7 @@ from model.image_metadata import ImageMetadata
 
 
 def extract_metadata(image_path: str) -> ImageMetadata:
-    print(f"Extracting metadata for {image_path}")
+    #print(f"Extracting metadata for {image_path}")
     exif_data = get_exif_data(image_path)
     if exif_data is None:
         return ImageMetadata(
