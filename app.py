@@ -1,22 +1,24 @@
-import calendar
 import glob
 import os.path
 import shutil
-from concurrent.futures import ThreadPoolExecutor
-
+from pathlib import Path
+import logging
 import pillow_heif
+from tqdm import tqdm
 
 from image_metadata_extractor import extract_metadata
 from model.image_metadata import ImageMetadata
-from tqdm import tqdm
+
+logger = logging.getLogger(__name__)
 
 def get_output_path(base_output_path, image_metadata: ImageMetadata) -> str:
+    if ".png" in image_metadata.file_path:
+        return os.path.join(base_output_path, "Screenshots")
+
     if image_metadata.created_on is None:
-        return os.path.join(base_output_path, f"Misc")
+        return os.path.join(base_output_path, "Misc")
 
     year = image_metadata.created_on.year
-    #month = image_metadata.created_on.month
-    #month_str = calendar.month_name[month]
 
     if image_metadata.address.country is not None:
         location = f"{image_metadata.address.country}"
@@ -28,30 +30,29 @@ def get_output_path(base_output_path, image_metadata: ImageMetadata) -> str:
 
 
 def is_jpeg(image_path):
-    return ".jpg" in image_path or ".jpeg" in image_path or ".JPG" in image_path
-
-from pathlib import Path
+    return ".jpg" in image_path or ".jpeg" in image_path or ".JPG" in image_path or ".JPEG" in image_path
 
 
-def move_file(image_path, output_dir, dry_run, progress_bar):
+def move_file(image_path, output_dir, dry_run):
     image_metadata = extract_metadata(image_path)
     output_path = get_output_path(output_dir, image_metadata)
 
     if dry_run:
-        print(f"(Dry Run) - Would move {image_metadata.file_path} to {output_path}\n")
+        logger.info(f"(Dry Run) - Would move {image_metadata.file_path} to {output_path}")
     else:
         os.makedirs(output_path, exist_ok=True)
 
         my_file = Path(f"{output_path}\\{os.path.basename(image_metadata.file_path)}")
         if my_file.exists():
-            os.remove(f"{output_path}\\{os.path.basename(image_metadata.file_path)}")
+            logger.warn(f"File at path {my_file} already exists")
+            os.rename(f"{output_path}\\{os.path.basename(image_metadata.file_path)}", f"{output_path}\\Copy_{os.path.basename(image_metadata.file_path)}")
         shutil.move(image_metadata.file_path, output_path)
-        print(f"Moved {image_metadata.file_path} to {output_path}")
-        progress_bar.update(1)
+
+        logger.info(f"Moved {image_metadata.file_path} to {output_path}")
 
 
 def is_file_format_supported(file_path):
-    return is_jpeg(file_path) or ".HEIC" in file_path
+    return is_jpeg(file_path) or ".HEIC" in file_path or ".png" in file_path
 
 
 def run(input_dir, output_dir, dry_run):
@@ -60,33 +61,22 @@ def run(input_dir, output_dir, dry_run):
     pillow_heif.register_heif_opener()
 
     supported_files = [file for file in files if is_file_format_supported(file)]
-    print(f"Found {len(supported_files)} images to move")
+    logger.info(f"Found {len(supported_files)} images to move")
+
+    if len(supported_files) == 0:
+        return
 
     with tqdm(total=len(supported_files)) as progress_bar:
-        #with ThreadPoolExecutor(max_workers=8) as executor:
         for image_path in supported_files:
             try:
-                #executor.submit(move_file, image_path, output_dir, dry_run, progress_bar)
-                move_file(image_path, output_dir, dry_run, progress_bar)
-            except:
-                print(f"Failed to move file {image_path}")
+                move_file(image_path, output_dir, dry_run)
+            except Exception as e:
+                logger.exception(e)
+            progress_bar.update(1)
 
 
-
-'''
-Given an input folder with some images:
-    - Group them into folders by
-      - Location
-      - Year-month
-    For example) 2024/June - Santorini
-
-Deal with cases where a trip spans several months (for ex last day of May and first day of June)
-Have a progress bar to know how long it will take
-Deal with cases where we don't have any metadata
-
-How to deal with photos of other formats? HEIC?
-'''
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     input_dir = "C:\\Users\\arsal\\Documents\\photos_to_sort\\*"
     output_dir = "C:\\Users\\arsal\\Pictures\\sorted_photos"
     dry_run = False
