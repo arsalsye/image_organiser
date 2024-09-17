@@ -8,7 +8,6 @@ def convert_to_degrees(value):
     return d + (m / 60.0) + (s / 3600.0)
 
 
-
 def get_lat_lon(exif_data):
     if not exif_data:
         return None, None
@@ -38,6 +37,7 @@ def get_location(latitude, longitude):
 
     geoLoc = Nominatim(user_agent="GetLocation")
     return geoLoc.reverse(f"{latitude}, {longitude}", language="en-GB")
+
 
 def get_country(location):
     if location is None:
