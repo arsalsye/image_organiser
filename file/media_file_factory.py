@@ -1,8 +1,11 @@
+from pathlib import Path
+
 import pillow_heif
 
 from file.heic_file import HeicFile
 from file.jpeg_file import JpegFile
 from file.media_file import MediaFile
+from file.mp4_file import Mp4File
 from file.png_file import PngFile
 
 
@@ -18,8 +21,11 @@ class MediaFileFactory:
             return PngFile(filepath)
         elif self._is_heic(filepath):
             return HeicFile(filepath)
+        elif self._is_mp4(filepath):
+            return Mp4File(filepath)
         else:
-            raise ValueError(f"Unsupported file type: {filepath}")
+            file_extension = Path(filepath).suffix
+            raise ValueError(f"Unsupported file extension '{file_extension}' on file {filepath}")
 
     @staticmethod
     def _is_jpeg(image_path):
@@ -35,3 +41,8 @@ class MediaFileFactory:
     def _is_heic(image_path):
         image_path_lower = image_path.lower()
         return ".heic" in image_path_lower
+
+    @staticmethod
+    def _is_mp4(image_path):
+        image_path_lower = image_path.lower()
+        return ".mp4" in image_path_lower
