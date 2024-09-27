@@ -1,83 +1,64 @@
 import glob
+import logging
 import os.path
 import shutil
 from pathlib import Path
-import logging
+
 import pillow_heif
 from tqdm import tqdm
 
-from image_metadata_extractor import extract_metadata
-from model.image_metadata import ImageMetadata
+from file.media_file import MediaFile
+from file.media_file_factory import MediaFileFactory
 
 logger = logging.getLogger(__name__)
 
-def get_output_path(base_output_path, image_metadata: ImageMetadata) -> str:
-    if ".png" in image_metadata.file_path:
-        return os.path.join(base_output_path, "Screenshots")
 
-    if image_metadata.created_on is None:
-        return os.path.join(base_output_path, "Misc")
+class ImageOrganiser:
 
-    year = image_metadata.created_on.year
+    def __init__(self, dry_run):
+        self.dry_run: bool = dry_run
 
-    if image_metadata.address.country is not None:
-        location = f"{image_metadata.address.country}"
-    else:
-        location = ""
+    def run(self, input_dir: str, output_dir: str):
+        files = glob.glob(input_dir, recursive=True)
+        media_file_factory = MediaFileFactory()
+        media_files = [media_file_factory.create_file(file) for file in files]
 
-    relative_path = f"{year}\\{location}"
-    return os.path.join(base_output_path, relative_path)
+        logger.info(f"Found {len(media_files)} images to move")
 
+        if len(media_files) == 0:
+            logger.warn(f"No files to move, exiting..")
+            return
 
-def is_jpeg(image_path):
-    return ".jpg" in image_path or ".jpeg" in image_path or ".JPG" in image_path or ".JPEG" in image_path
+        with tqdm(total=len(media_files)) as progress_bar:
+            for media_file in media_files:
+                try:
+                    self.move_file(media_file, output_dir)
+                except Exception as e:
+                    logger.exception(e)
+                progress_bar.update(1)
 
+    def move_file(self, media_file: MediaFile, output_dir):
+        output_path = media_file.get_output_destination(output_dir)
 
-def move_file(image_path, output_dir, dry_run):
-    image_metadata = extract_metadata(image_path)
-    output_path = get_output_path(output_dir, image_metadata)
+        if self.dry_run:
+            logger.info(f"(Dry Run) - Would move {media_file.filepath} to {output_path}")
+        else:
+            os.makedirs(output_path, exist_ok=True)
 
-    if dry_run:
-        logger.info(f"(Dry Run) - Would move {image_metadata.file_path} to {output_path}")
-    else:
-        os.makedirs(output_path, exist_ok=True)
+            my_file = Path(f"{output_path}\\{os.path.basename(media_file.filepath)}")
+            if my_file.exists():
+                logger.warn(f"File at path {my_file} already exists")
+                os.rename(f"{output_path}\\{os.path.basename(media_file.filepath)}",
+                          f"{output_path}\\Copy_{os.path.basename(media_file.filepath)}")
+            shutil.move(media_file.filepath, output_path)
 
-        my_file = Path(f"{output_path}\\{os.path.basename(image_metadata.file_path)}")
-        if my_file.exists():
-            logger.warn(f"File at path {my_file} already exists")
-            os.rename(f"{output_path}\\{os.path.basename(image_metadata.file_path)}", f"{output_path}\\Copy_{os.path.basename(image_metadata.file_path)}")
-        shutil.move(image_metadata.file_path, output_path)
-
-        logger.info(f"Moved {image_metadata.file_path} to {output_path}")
-
-
-def is_file_format_supported(file_path):
-    return is_jpeg(file_path) or ".HEIC" in file_path or ".png" in file_path
-
-
-def run(input_dir, output_dir, dry_run):
-    files = glob.glob(input_dir, recursive=True)
-
-    pillow_heif.register_heif_opener()
-
-    supported_files = [file for file in files if is_file_format_supported(file)]
-    logger.info(f"Found {len(supported_files)} images to move")
-
-    if len(supported_files) == 0:
-        return
-
-    with tqdm(total=len(supported_files)) as progress_bar:
-        for image_path in supported_files:
-            try:
-                move_file(image_path, output_dir, dry_run)
-            except Exception as e:
-                logger.exception(e)
-            progress_bar.update(1)
+            logger.info(f"Moved {media_file.filepath} to {output_path}")
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    input_dir = "C:\\Users\\arsal\\Documents\\photos_to_sort\\*"
+
+    input_dir = "C:\\Users\\arsal\\Documents\\test\\*"
     output_dir = "C:\\Users\\arsal\\Pictures\\sorted_photos"
-    dry_run = False
-    run(input_dir, output_dir, dry_run)
+
+    ImageOrganiser(dry_run=True).run(input_dir, output_dir)
