@@ -23,6 +23,8 @@ class MediaFileFactory:
             return HeicFile(filepath)
         elif self._is_mp4(filepath):
             return Mp4File(filepath)
+        elif self._is_mov(filepath):
+            return Mp4File(filepath)
         else:
             file_extension = Path(filepath).suffix
             raise ValueError(f"Unsupported file extension '{file_extension}' on file {filepath}")
@@ -46,3 +48,8 @@ class MediaFileFactory:
     def _is_mp4(image_path):
         image_path_lower = image_path.lower()
         return ".mp4" in image_path_lower
+
+    @staticmethod
+    def _is_mov(image_path):
+        image_path_lower = image_path.lower()
+        return ".mov" in image_path_lower
